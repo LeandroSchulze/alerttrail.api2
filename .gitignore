@@ -1,0 +1,21 @@
+﻿# Python / FastAPI
+__pycache__/
+*.pyc
+.venv/
+env/
+venv/
+
+# Config/Secrets
+.env
+
+# Bases de datos locales
+*.db
+*.sqlite*
+*.sqlite3
+
+# Build/IDE
+dist/
+build/
+*.log
+.idea/
+.vscode/

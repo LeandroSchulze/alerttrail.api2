@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>AlertTrail</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body class="bg-slate-50 text-slate-800">
+    <nav class="bg-white shadow px-4 py-3">
+      <div class="max-w-6xl mx-auto flex justify-between items-center">
+        <a href="/dashboard" class="font-bold text-xl">AlertTrail</a>
+        <div class="flex items-center gap-3">
+          {% if user %}
+          <a href="/profile" class="text-sm underline">Perfil</a>
+          <form action="/logout" method="post">
+            <button class="px-3 py-1 rounded-xl bg-slate-900 text-white">Cerrar sesión</button>
+          </form>
+          {% endif %}
+        </div>
+      </div>
+    </nav>
+    <main class="max-w-6xl mx-auto p-4">
+      {% block content %}{% endblock %}
+    </main>
+  </body>
+</html>

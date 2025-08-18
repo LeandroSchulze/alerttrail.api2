@@ -1,0 +1,115 @@
+{% extends "layout.html" %}
+{% block content %}
+<h1 class="text-2xl font-semibold mb-2">Hola, {{ user.email }}</h1>
+<p class="text-slate-600 mb-1">Plan: {{ user.plan|capitalize }}</p>
+
+<div class="bg-white rounded-2xl shadow p-5 mb-4">
+  <form method="get" class="grid md:grid-cols-6 gap-3 items-end">
+    <div>
+      <label class="block text-sm">Desde</label>
+      <input type="date" name="date_from" class="border rounded-lg px-3 py-2" value="{{ request.query_params.get('date_from','') }}">
+    </div>
+    <div>
+      <label class="block text-sm">Hasta</label>
+      <input type="date" name="date_to" class="border rounded-lg px-3 py-2" value="{{ request.query_params.get('date_to','') }}">
+    </div>
+    <div class="md:col-span-2">
+      <label class="block text-sm">Buscar</label>
+      <input type="text" name="q" placeholder="archivo o resumen..." class="w-full border rounded-lg px-3 py-2" value="{{ request.query_params.get('q','') }}">
+    </div>
+    <div>
+      <label class="block text-sm">Por página</label>
+      <select name="per_page" class="border rounded-lg px-3 py-2">
+        {% set current_pp = request.query_params.get('per_page', per_page) | int %}
+        {% for opt in [10,25,50,100] %}
+        <option value="{{ opt }}" {% if current_pp==opt %}selected{% endif %}>{{ opt }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="md:col-span-6 flex gap-2">
+      <button class="mt-1 bg-slate-900 text-white px-4 py-2 rounded-xl">Aplicar</button>
+      <a class="mt-1 px-4 py-2 rounded-xl border" href="/export_all_csv?{{ request.query_params.urlencode() }}">Exportar CSV (todo)</a>
+    </div>
+  </form>
+</div>
+
+<form action="/delete_batch" method="post" onsubmit="return confirm('Eliminar seleccionados?')" class="bg-white rounded-2xl shadow p-5">
+  <div class="flex justify-between items-center mb-3">
+    <h2 class="text-lg font-semibold">Historial</h2>
+    <div class="flex items-center gap-2">
+      <label class="text-sm"><input type="checkbox" id="selectAll" class="mr-1"> Seleccionar todo</label>
+      <input type="hidden" name="ids" id="idsField">
+      <button class="px-3 py-1 rounded-xl bg-red-600 text-white">Eliminar seleccionados</button>
+    </div>
+  </div>
+  {% if analyses %}
+  <ul class="divide-y">
+    {% for a in analyses %}
+    <li class="py-4">
+      <div class="flex justify-between items-start">
+        <div class="max-w-3xl">
+          <label class="inline-flex items-center mb-2">
+            <input type="checkbox" class="rowChk mr-2" value="{{ a.id }}">
+            <span class="font-medium">{{ a.filename }}</span>
+          </label>
+          <p class="text-sm text-slate-600">{{ a.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</p>
+          <pre class="text-xs bg-slate-50 p-2 rounded mt-1">{{ a.summary }}</pre>
+          {% if a.ai_summary or a.ai_recommendations %}
+          <div class="mt-3 bg-indigo-50 border border-indigo-200 rounded-xl p-3">
+            <p class="text-sm font-semibold">Modo IA</p>
+            <p class="text-sm">Severidad: <b>{{ a.ai_severity or 0 }}/100</b></p>
+            <p class="text-sm mt-1"><b>Resumen:</b> {{ a.ai_summary }}</p>
+            <p class="text-sm mt-1"><b>Recomendaciones:</b></p>
+            <pre class="text-xs bg-white p-2 rounded mt-1 whitespace-pre-wrap">{{ a.ai_recommendations }}</pre>
+          </div>
+          {% endif %}
+        </div>
+        <div class="flex flex-col gap-2">
+          <form action="/ai/{{ a.id }}" method="post">
+            <button class="px-3 py-1 rounded-xl bg-indigo-600 text-white">Mejorar con IA (Pro)</button>
+          </form>
+          {% if user.plan != 'free' %}
+          <a href="/pdf/{{ a.id }}" class="px-3 py-1 rounded-xl bg-slate-900 text-white">PDF</a>
+          {% endif %}
+          <a href="/export_ips/{{ a.id }}" class="px-3 py-1 rounded-xl bg-slate-700 text-white">CSV IPs</a>
+          <form action="/delete/{{ a.id }}" method="post" onsubmit="return confirm('Eliminar análisis?')">
+            <button class="px-3 py-1 rounded-xl bg-red-600 text-white">Eliminar</button>
+          </form>
+        </div>
+      </div>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="text-slate-600">Sin análisis aún.</p>
+  {% endif %}
+
+  {% if pages and pages > 1 %}
+  {% set qp = request.query_params.copy() %}
+  <div class="flex justify-between items-center mt-4">
+    <div class="text-sm">Página {{ page }} / {{ pages }} ({{ total }} registros) — {{ per_page }} por página</div>
+    <div class="flex gap-2">
+      {% if page > 1 %}
+      {% set qp_prev = qp.copy() %}{% do qp_prev.update({'page': page-1, 'per_page': per_page}) %}
+      <a class="px-3 py-1 border rounded" href="?{{ qp_prev.urlencode() }}">Anterior</a>
+      {% endif %}
+      {% if page < pages %}
+      {% set qp_next = qp.copy() %}{% do qp_next.update({'page': page+1, 'per_page': per_page}) %}
+      <a class="px-3 py-1 border rounded" href="?{{ qp_next.urlencode() }}">Siguiente</a>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+</form>
+
+<script>
+const selectAll = document.getElementById('selectAll');
+const idsField = document.getElementById('idsField');
+const rowChks = Array.from(document.querySelectorAll('.rowChk'));
+function refreshIds(){ idsField.value = rowChks.filter(c=>c.checked).map(c=>c.value).join(','); }
+rowChks.forEach(c=>c.addEventListener('change', refreshIds));
+if(selectAll){ 
+  selectAll.addEventListener('change', e => { rowChks.forEach(c => c.checked = e.target.checked); refreshIds(); });
+}
+</script>
+{% endblock %}
