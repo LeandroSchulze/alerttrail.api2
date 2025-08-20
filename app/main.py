@@ -93,3 +93,14 @@ def me(current_user: UserModel = Depends(get_current_user)):
         "role": getattr(current_user, "role", None),
         "plan": getattr(current_user, "plan", None),
     }
+
+# --- Demo UI ---
+from fastapi import Request
+from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
+
+templates = Jinja2Templates(directory="app/templates")
+
+@app.get("/demo", response_class=HTMLResponse)
+def demo(request: Request):
+    return templates.TemplateResponse("demo.html", {"request": request})
